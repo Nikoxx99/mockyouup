@@ -115,12 +115,13 @@ new Vue({
               reader.onload = (e) => {
                   this.originalImage = new Image();
                   this.originalImage.onload = () => {
-                      this.applyPerspectiveToImage(); // Solo aplicar perspectiva cuando la imagen esté completamente cargada
+                      this.applyPerspectiveToImage();
+                      this.screenImageSelected = true;
+                      this.saveVertices(); // Automatically save after loading the image
                   };
                   this.originalImage.src = e.target.result;
               };
               reader.readAsDataURL(file);
-              this.screenImageSelected = true;
           }
       },
       loadBackgroundImage(event) {
@@ -131,7 +132,7 @@ new Vue({
                   this.backgroundImage = e.target.result;
                   this.isCustomBackground = true;
                   this.backgroundImageSelected = true;
-                  this.saveVertices(); // Save the new background
+                  this.saveVertices(); // Automatically save after loading the background image
               };
               reader.readAsDataURL(file);
           }
@@ -189,7 +190,7 @@ new Vue({
               height: bottom - top
           };
       },
-      fetchVertices() {
+      fetchMockupData() {
           const urlParams = new URLSearchParams(window.location.search);
           this.uuid = urlParams.get('uuid');
 
@@ -203,54 +204,66 @@ new Vue({
             fetch(`/get/${this.uuid}`)
               .then(response => response.json())
               .then(data => {
+                console.log(data);
                   this.points = JSON.parse(data.vertices);
-                    if (data.image) {
-                        this.loadImageFromURL(data.image);
-                    }
+                  if (data.image) {
+                      this.loadImageFromURL(data.image);
+                      this.screenImageSelected = true;
+                  }
                   if (data.background) {
                     this.backgroundImage = data.background;
                     this.isCustomBackground = true;
+                    this.backgroundImageSelected = true;
                   }
                   this.createPcScreen();
               })
-              .catch(() => console.error('Error al obtener los datos.'));
+              .catch(() => console.error('Error al obtener los datos del mockup.'));
           }
       },
       loadImageFromURL(url) {
           this.originalImage = new Image();
           this.originalImage.onload = () => {
-              this.applyPerspectiveToImage(); // Solo aplicar perspectiva cuando la imagen esté completamente cargada
+              this.applyPerspectiveToImage();
+              this.screenImageSelected = true;
           };
           this.originalImage.src = url;
       },
       saveVertices() {
           if (this.uuid) {
-              const formData = new FormData();
-              formData.append('uuid', this.uuid);
-              formData.append('vertices', JSON.stringify(this.points));
-              formData.append('isCustomBackground', this.isCustomBackground);
+            const formData = new FormData();
+            formData.append('uuid', this.uuid);
+            formData.append('vertices', JSON.stringify(this.points));
+            formData.append('isCustomBackground', this.isCustomBackground);
 
-              const fileInput = document.querySelector('input[type="file"][accept="image/*"]');
-              if (fileInput && fileInput.files.length > 0) {
-                  formData.append('image', fileInput.files[0]);
-              }
+            // Guardar la imagen de pantalla
+            const screenInput = document.querySelector('input[type="file"][id="screenImage"]');
+            if (screenInput && screenInput.files.length > 0) {
+              formData.append('image', screenInput.files[0]);
+            } else if (this.originalImage && this.originalImage.src.startsWith('data:')) {
+              // Si no hay un nuevo archivo, pero hay una imagen cargada, usamos esa
+              formData.append('image', this.originalImage.src);
+            }
 
-              const bgInput = document.querySelector('input[type="file"][accept="image/*"][id="bgInput"]');
-              if (bgInput && bgInput.files.length > 0) {
-                  formData.append('background', bgInput.files[0]);
-              }
+            // Guardar la imagen de fondo
+            const bgInput = document.querySelector('input[type="file"][id="bgInput"]');
+            if (bgInput && bgInput.files.length > 0) {
+              formData.append('background', bgInput.files[0]);
+            } else if (this.isCustomBackground && this.backgroundImage && !this.backgroundImage.startsWith('bg.avif')) {
+              // Si no hay un nuevo archivo, pero hay un fondo personalizado, usamos ese
+              formData.append('background', this.backgroundImage);
+            }
 
-              fetch('/save', {
-                  method: 'POST',
-                  body: formData
-              })
-              .then(() => console.log('Vértices, imagen y fondo guardados correctamente.'))
-              .catch(() => console.error('Error al guardar los datos.'));
+            fetch('/save', {
+              method: 'POST',
+              body: formData
+            })
+            .then(() => console.log('Vértices, imagen y fondo guardados correctamente.'))
+            .catch(() => console.error('Error al guardar los datos.'));
           }
       }
   },
   mounted() {
       this.initCanvas();
-      this.fetchVertices();
+      this.fetchMockupData();
   }
 });

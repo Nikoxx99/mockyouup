@@ -10,7 +10,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background: #e0eafc;
             background: linear-gradient(180deg, #e0eafc 0%, #cfdef3 100%);
             margin: 0;
@@ -23,7 +23,8 @@
             border-radius: 20px;
             padding: 20px;
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            width: 300px;
+            width: 80%;
+            max-width: 800px;
             text-align: center;
         }
 
@@ -31,12 +32,15 @@
             color: #333;
         }
 
-        .uuid-list {
+        .mockup-list {
             list-style-type: none;
             padding: 0;
         }
 
-        .uuid-list li {
+        .mockup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin: 10px 0;
             padding: 10px;
             border-radius: 10px;
@@ -46,15 +50,43 @@
             transition: background 0.3s ease;
         }
 
-        .uuid-list li:hover {
+        .mockup-item:hover {
             background: rgba(255, 255, 255, 0.5);
+        }
+
+        .mockup-info {
+            text-align: left;
+        }
+
+        .mockup-preview {
+            width: 100px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .new-mockup-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .new-mockup-btn:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Mockups Disponibles</h1>
-        <ul id="uuid-list" class="uuid-list"></ul>
+        <ul id="mockup-list" class="mockup-list"></ul>
+        <button id="new-mockup-btn" class="new-mockup-btn">Nuevo Mockup</button>
     </div>
     <script src="list.js"></script>
 </body>

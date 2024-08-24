@@ -37,9 +37,10 @@ const db = new sqlite3.Database(path.join(__dirname, 'mockups.db')); // Cambia '
 db.run(`CREATE TABLE IF NOT EXISTS mockups (
     uuid TEXT PRIMARY KEY,
     vertices TEXT,
-    image TEXT,
-    background TEXT,
-    isCustomBackground BOOLEAN
+    screen_image TEXT,
+    background_image TEXT,
+    isCustomBackground BOOLEAN,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
 // Ruta para guardar la imagen y las coordenadas
@@ -48,8 +49,8 @@ app.post('/save', upload.fields([
     { name: 'background', maxCount: 1 }
 ]), (req, res) => {
     const { uuid, vertices, isCustomBackground } = req.body;
-    const imagePath = req.files['image'] ? `/uploads/${req.files['image'][0].filename}` : null;
-    const backgroundPath = req.files['background'] ? `/uploads/${req.files['background'][0].filename}` : null;
+    const screenImagePath = req.files['image'] ? `/uploads/${req.files['image'][0].filename}` : null;
+    const backgroundImagePath = req.files['background'] ? `/uploads/${req.files['background'][0].filename}` : null;
 
     if (!uuid || !vertices) {
         return res.status(400).send('UUID y vértices son requeridos.');
@@ -57,14 +58,14 @@ app.post('/save', upload.fields([
 
     const verticesString = JSON.stringify(vertices);
 
-    db.run(`INSERT INTO mockups (uuid, vertices, image, background, isCustomBackground) 
+    db.run(`INSERT INTO mockups (uuid, vertices, screen_image, background_image, isCustomBackground) 
             VALUES (?, ?, ?, ?, ?) 
             ON CONFLICT(uuid) DO UPDATE SET 
             vertices = excluded.vertices, 
-            image = excluded.image, 
-            background = excluded.background, 
+            screen_image = COALESCE(excluded.screen_image, screen_image), 
+            background_image = COALESCE(excluded.background_image, background_image), 
             isCustomBackground = excluded.isCustomBackground`,
-        [uuid, verticesString, imagePath, backgroundPath, isCustomBackground === 'true'],
+        [uuid, verticesString, screenImagePath, backgroundImagePath, isCustomBackground === 'true'],
         function (err) {
             if (err) {
                 return res.status(500).send('Error al guardar los datos.');
@@ -74,11 +75,11 @@ app.post('/save', upload.fields([
     );
 });
 
-// Ruta para obtener los vértices y la imagen
+// Ruta para obtener los vértices y las imágenes
 app.get('/get/:uuid', (req, res) => {
     const uuid = req.params.uuid;
 
-    db.get(`SELECT vertices, image, background, isCustomBackground FROM mockups WHERE uuid = ?`, [uuid], (err, row) => {
+    db.get(`SELECT vertices, screen_image, background_image, isCustomBackground FROM mockups WHERE uuid = ?`, [uuid], (err, row) => {
         if (err) {
             return res.status(500).send('Error al obtener los datos.');
         }
@@ -89,21 +90,20 @@ app.get('/get/:uuid', (req, res) => {
 
         res.json({
             vertices: JSON.parse(row.vertices),
-            image: row.image,
-            background: row.background,
+            image: row.screen_image,
+            background: row.background_image,
             isCustomBackground: row.isCustomBackground
         });
     });
 });
 
-// Ruta para obtener todas las UUIDs disponibles
+// Ruta para obtener todas las UUIDs disponibles con información adicional
 app.get('/uuids', (req, res) => {
-    db.all(`SELECT uuid FROM mockups`, [], (err, rows) => {
+    db.all(`SELECT uuid, screen_image, background_image, datetime(created_at, 'localtime') as created_at FROM mockups ORDER BY created_at DESC`, [], (err, rows) => {
         if (err) {
-            return res.status(500).send('Error al obtener las UUIDs.');
+            return res.status(500).send('Error al obtener los mockups.');
         }
-        const uuids = rows.map(row => row.uuid);
-        res.json(uuids);
+        res.json(rows);
     });
 });
 
