@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Mockups</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #e0eafc;
+            background: linear-gradient(180deg, #e0eafc 0%, #cfdef3 100%);
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            width: 300px;
+            text-align: center;
+        }
+
+        .container h1 {
+            color: #333;
+        }
+
+        .uuid-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .uuid-list li {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .uuid-list li:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mockups Disponibles</h1>
+        <ul id="uuid-list" class="uuid-list"></ul>
+    </div>
+    <script src="list.js"></script>
+</body>
+</html>
