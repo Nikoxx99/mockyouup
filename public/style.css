@@ -5,6 +5,33 @@ body, html {
   overflow: hidden;
 }
 
+/* Navbar Styles */
+.navbar {
+  position: absolute; /* Posición absoluta para superponerlo sobre la imagen */
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente */
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10; /* Asegura que esté por encima de otros elementos */
+}
+
+.nav-item {
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px;
+  transition: color 0.3s ease;
+}
+
+.nav-item:hover {
+  color: #ddd;
+}
+
 #container {
   position: relative;
   width: 100%;
@@ -38,9 +65,9 @@ body, html {
 }
 
 #debug-panel {
-  top: 10px;
+  top: 60px; /* Ajuste para dejar espacio al navbar */
 }
 
 #upload-panel {
-  top: 150px;
+  top: 200px; /* Ajuste para dejar espacio al navbar */
 }

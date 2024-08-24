@@ -47,6 +47,10 @@ new Vue({
           this.canvas.renderAll();
       },
       createPcScreen() {
+          if (this.screen) {
+              this.canvas.remove(this.screen);
+          }
+
           this.screen = new fabric.Polygon(this.points, {
               fill: 'rgba(200, 200, 200, 0.5)',
               stroke: 'blue',
@@ -57,6 +61,11 @@ new Vue({
               objectCaching: false
           });
           this.canvas.add(this.screen);
+
+          if (this.controlPoints.length > 0) {
+              this.controlPoints.forEach(point => this.canvas.remove(point));
+              this.controlPoints = [];
+          }
 
           this.controlPoints = this.points.map((point, index) => {
               let circle = new fabric.Circle({
@@ -80,12 +89,12 @@ new Vue({
 
               circle.on('mouseup', () => {
                   this.debouncedUpdatePerspective();
-                  this.saveVertices(); // Guardar automáticamente después de recalcular la perspectiva
+                  this.saveVertices();
               });
 
               circle.on('touchend', () => {
                   this.debouncedUpdatePerspective();
-                  this.saveVertices(); // Guardar automáticamente después de recalcular la perspectiva
+                  this.saveVertices();
               });
 
               this.canvas.add(circle);
@@ -102,7 +111,7 @@ new Vue({
               reader.onload = (e) => {
                   this.originalImage = new Image();
                   this.originalImage.onload = () => {
-                      this.applyPerspectiveToImage();
+                      this.applyPerspectiveToImage(); // Solo aplicar perspectiva cuando la imagen esté completamente cargada
                   };
                   this.originalImage.src = e.target.result;
               };
@@ -110,15 +119,15 @@ new Vue({
           }
       },
       applyPerspectiveToImage() {
-          if (!this.originalImage) return;
-
+          if (!this.originalImage || !Array.isArray(this.points)) return;
+      
           const bounds = this.getPolygonBounds();
           const width = bounds.width;
           const height = bounds.height;
-
+      
           this.glfxCanvas.width = width;
           this.glfxCanvas.height = height;
-
+      
           const texture = this.glfxCanvas.texture(this.originalImage);
           this.glfxCanvas.draw(texture).perspective(
               [0, 0, this.originalImage.width, 0, this.originalImage.width, this.originalImage.height, 0, this.originalImage.height],
@@ -129,13 +138,13 @@ new Vue({
                   this.points[3].x - bounds.left, this.points[3].y - bounds.top
               ]
           ).update();
-
+      
           const dataURL = this.glfxCanvas.toDataURL('image/png');
           fabric.Image.fromURL(dataURL, (fImg) => {
               if (this.transformedImage) {
                   this.canvas.remove(this.transformedImage);
               }
-
+      
               this.transformedImage = fImg;
               this.transformedImage.set({
                   left: bounds.left,
@@ -143,7 +152,7 @@ new Vue({
                   selectable: false,
                   evented: false
               });
-
+      
               this.canvas.add(this.transformedImage);
               this.canvas.renderAll();
           });
@@ -171,39 +180,49 @@ new Vue({
               urlParams.set('uuid', this.uuid);
               window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
 
-              this.saveVertices(); // Guardar la configuración inicial
+              this.saveVertices();
           } else {
-              fetch(`/get/${this.uuid}`)
-                  .then(response => response.json())
-                  .then(data => {
-                      if (data) {
-                          this.points = data;
-                      }
-                      this.createPcScreen();
-                      this.applyPerspectiveToImage();
-                  })
-                  .catch(() => console.error('Error al obtener los vértices.'));
+            fetch(`/get/${this.uuid}`)
+              .then(response => response.json())
+              .then(data => {
+                  this.points = JSON.parse(data.vertices);
+                    if (data.image) {
+                        this.loadImageFromURL(data.image);
+                    }
+                  this.createPcScreen();
+              })
+              .catch(() => console.error('Error al obtener los vértices.'));
           }
+      },
+      loadImageFromURL(url) {
+          this.originalImage = new Image();
+          this.originalImage.onload = () => {
+              this.applyPerspectiveToImage(); // Solo aplicar perspectiva cuando la imagen esté completamente cargada
+          };
+          this.originalImage.src = url;
       },
       saveVertices() {
           if (this.uuid) {
+              const formData = new FormData();
+              formData.append('uuid', this.uuid);
+              formData.append('vertices', JSON.stringify(this.points));
+
+              const fileInput = document.querySelector('input[type="file"]');
+              if (fileInput && fileInput.files.length > 0) {
+                  formData.append('image', fileInput.files[0]);
+              }
+
               fetch('/save', {
                   method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                      uuid: this.uuid,
-                      vertices: this.points
-                  })
+                  body: formData
               })
-              .then(() => console.log('Vértices guardados correctamente.'))
-              .catch(() => console.error('Error al guardar los vértices.'));
+              .then(() => console.log('Vértices e imagen guardados correctamente.'))
+              .catch(() => console.error('Error al guardar los datos.'));
           }
       }
   },
   mounted() {
       this.initCanvas();
-      this.fetchVertices();  // Cargar los vértices si existe un UUID, o generar uno si no existe
+      this.fetchVertices();
   }
 });
