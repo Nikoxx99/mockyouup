@@ -19,15 +19,21 @@
 
     <div id="app">
         <div id="container">
-            <img id="backgroundImage" src="bg.avif" alt="PC Background">
+            <img id="backgroundImage" :src="backgroundImage" alt="PC Background">
             <canvas id="canvas"></canvas>
-            <div id="debug-panel">
-                <div v-for="(point, index) in points" :key="index">
-                    Punto {{ index + 1 }}: ({{ Math.round(point.x) }}, {{ Math.round(point.y) }})
-                </div>
-            </div>
             <div id="upload-panel">
-                <input type="file" @change="loadImage" accept="image/*">
+                <div class="file-input-wrapper">
+                    <input type="file" id="screenImage" @change="loadImage" accept="image/*">
+                    <label for="screenImage" :class="{ 'file-selected': screenImageSelected }">
+                        {{ screenImageSelected ? 'Imagen de pantalla cargada' : 'Seleccionar imagen de pantalla' }}
+                    </label>
+                </div>
+                <div class="file-input-wrapper">
+                    <input type="file" id="bgInput" @change="loadBackgroundImage" accept="image/*">
+                    <label for="bgInput" :class="{ 'file-selected': backgroundImageSelected }">
+                        {{ backgroundImageSelected ? 'Imagen de fondo cargada' : 'Seleccionar imagen de fondo' }}
+                    </label>
+                </div>
                 <button @click="saveVertices">Guardar</button>
             </div>
         </div>

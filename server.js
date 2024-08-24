@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de Multer para guardar las imágenes en el directorio "uploads"
+// Modificar la configuración de Multer para manejar múltiples archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, 'public/uploads');
@@ -23,7 +23,8 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        cb(null, req.body.uuid + path.extname(file.originalname)); // Usar la UUID como nombre de archivo
+        const ext = path.extname(file.originalname);
+        cb(null, `${req.body.uuid}_${file.fieldname}${ext}`);
     }
 });
 
@@ -32,17 +33,23 @@ const upload = multer({ storage: storage });
 // Conectar a la base de datos SQLite (usa un archivo para persistencia)
 const db = new sqlite3.Database(path.join(__dirname, 'mockups.db')); // Cambia ':memory:' a un archivo físico
 
-// Crear la tabla si no existe
+// Modificar la estructura de la tabla
 db.run(`CREATE TABLE IF NOT EXISTS mockups (
     uuid TEXT PRIMARY KEY,
     vertices TEXT,
-    image TEXT
+    image TEXT,
+    background TEXT,
+    isCustomBackground BOOLEAN
 )`);
 
 // Ruta para guardar la imagen y las coordenadas
-app.post('/save', upload.single('image'), (req, res) => {
-    const { uuid, vertices } = req.body;
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+app.post('/save', upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'background', maxCount: 1 }
+]), (req, res) => {
+    const { uuid, vertices, isCustomBackground } = req.body;
+    const imagePath = req.files['image'] ? `/uploads/${req.files['image'][0].filename}` : null;
+    const backgroundPath = req.files['background'] ? `/uploads/${req.files['background'][0].filename}` : null;
 
     if (!uuid || !vertices) {
         return res.status(400).send('UUID y vértices son requeridos.');
@@ -50,9 +57,14 @@ app.post('/save', upload.single('image'), (req, res) => {
 
     const verticesString = JSON.stringify(vertices);
 
-    db.run(`INSERT INTO mockups (uuid, vertices, image) VALUES (?, ?, ?) 
-            ON CONFLICT(uuid) DO UPDATE SET vertices = excluded.vertices, image = excluded.image`,
-        [uuid, verticesString, imagePath],
+    db.run(`INSERT INTO mockups (uuid, vertices, image, background, isCustomBackground) 
+            VALUES (?, ?, ?, ?, ?) 
+            ON CONFLICT(uuid) DO UPDATE SET 
+            vertices = excluded.vertices, 
+            image = excluded.image, 
+            background = excluded.background, 
+            isCustomBackground = excluded.isCustomBackground`,
+        [uuid, verticesString, imagePath, backgroundPath, isCustomBackground === 'true'],
         function (err) {
             if (err) {
                 return res.status(500).send('Error al guardar los datos.');
@@ -66,7 +78,7 @@ app.post('/save', upload.single('image'), (req, res) => {
 app.get('/get/:uuid', (req, res) => {
     const uuid = req.params.uuid;
 
-    db.get(`SELECT vertices, image FROM mockups WHERE uuid = ?`, [uuid], (err, row) => {
+    db.get(`SELECT vertices, image, background, isCustomBackground FROM mockups WHERE uuid = ?`, [uuid], (err, row) => {
         if (err) {
             return res.status(500).send('Error al obtener los datos.');
         }
@@ -75,7 +87,12 @@ app.get('/get/:uuid', (req, res) => {
             return res.status(404).send('Mockup no encontrado.');
         }
 
-        res.json({ vertices: JSON.parse(row.vertices), image: row.image });
+        res.json({
+            vertices: JSON.parse(row.vertices),
+            image: row.image,
+            background: row.background,
+            isCustomBackground: row.isCustomBackground
+        });
     });
 });
 

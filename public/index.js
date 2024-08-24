@@ -27,7 +27,11 @@ new Vue({
       originalImage: null,
       transformedImage: null,
       debouncedUpdatePerspective: null,
-      uuid: null
+      uuid: null,
+      backgroundImage: 'bg.avif',
+      isCustomBackground: false,
+      screenImageSelected: false,
+      backgroundImageSelected: false
   },
   created() {
       this.debouncedUpdatePerspective = debounce(this.applyPerspectiveToImage, 100);
@@ -53,7 +57,7 @@ new Vue({
 
           this.screen = new fabric.Polygon(this.points, {
               fill: 'rgba(200, 200, 200, 0.5)',
-              stroke: 'blue',
+              stroke: '#e6e6e6',
               strokeWidth: 2,
               selectable: false,
               hasControls: false,
@@ -71,10 +75,10 @@ new Vue({
               let circle = new fabric.Circle({
                   left: point.x,
                   top: point.y,
-                  strokeWidth: 5,
-                  radius: 8,
-                  fill: '#fff',
-                  stroke: '#666',
+                  strokeWidth: 2,
+                  radius: 10,
+                  fill: '#ffffffa',
+                  stroke: '#e6e6e6',
                   originX: 'center',
                   originY: 'center',
                   hasBorders: false,
@@ -114,6 +118,20 @@ new Vue({
                       this.applyPerspectiveToImage(); // Solo aplicar perspectiva cuando la imagen esté completamente cargada
                   };
                   this.originalImage.src = e.target.result;
+              };
+              reader.readAsDataURL(file);
+              this.screenImageSelected = true;
+          }
+      },
+      loadBackgroundImage(event) {
+          const file = event.target.files[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  this.backgroundImage = e.target.result;
+                  this.isCustomBackground = true;
+                  this.backgroundImageSelected = true;
+                  this.saveVertices(); // Save the new background
               };
               reader.readAsDataURL(file);
           }
@@ -189,9 +207,13 @@ new Vue({
                     if (data.image) {
                         this.loadImageFromURL(data.image);
                     }
+                  if (data.background) {
+                    this.backgroundImage = data.background;
+                    this.isCustomBackground = true;
+                  }
                   this.createPcScreen();
               })
-              .catch(() => console.error('Error al obtener los vértices.'));
+              .catch(() => console.error('Error al obtener los datos.'));
           }
       },
       loadImageFromURL(url) {
@@ -206,17 +228,23 @@ new Vue({
               const formData = new FormData();
               formData.append('uuid', this.uuid);
               formData.append('vertices', JSON.stringify(this.points));
+              formData.append('isCustomBackground', this.isCustomBackground);
 
-              const fileInput = document.querySelector('input[type="file"]');
+              const fileInput = document.querySelector('input[type="file"][accept="image/*"]');
               if (fileInput && fileInput.files.length > 0) {
                   formData.append('image', fileInput.files[0]);
+              }
+
+              const bgInput = document.querySelector('input[type="file"][accept="image/*"][id="bgInput"]');
+              if (bgInput && bgInput.files.length > 0) {
+                  formData.append('background', bgInput.files[0]);
               }
 
               fetch('/save', {
                   method: 'POST',
                   body: formData
               })
-              .then(() => console.log('Vértices e imagen guardados correctamente.'))
+              .then(() => console.log('Vértices, imagen y fondo guardados correctamente.'))
               .catch(() => console.error('Error al guardar los datos.'));
           }
       }

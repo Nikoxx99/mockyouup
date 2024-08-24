@@ -3,6 +3,7 @@ body, html {
   padding: 0;
   height: 100vh;
   overflow: hidden;
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
 /* Navbar Styles */
@@ -53,21 +54,67 @@ body, html {
   left: 0;
 }
 
-#debug-panel, #upload-panel {
-  position: absolute;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
-  font-family: monospace;
-  font-size: 14px;
-}
-
-#debug-panel {
-  top: 60px; /* Ajuste para dejar espacio al navbar */
-}
-
 #upload-panel {
-  top: 200px; /* Ajuste para dejar espacio al navbar */
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  padding: 20px;
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.file-input-wrapper input[type="file"] {
+  display: none;
+}
+
+.file-input-wrapper label {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.file-input-wrapper label:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.file-input-wrapper label.file-selected {
+  background: rgba(76, 175, 80, 0.6);
+}
+
+.file-input-wrapper label.file-selected:hover {
+  background: rgba(76, 175, 80, 0.8);
+}
+
+#upload-panel button {
+  background: rgba(76, 175, 80, 0.6);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+#upload-panel button:hover {
+  background: rgba(76, 175, 80, 0.8);
 }
