@@ -31,8 +31,10 @@ function createTable($db) {
         uuid TEXT PRIMARY KEY,
         vertices TEXT,
         screen_image TEXT,
+        background_image TEXT,
         size TEXT,
         position TEXT,
+        texts TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )');
 }
@@ -48,17 +50,20 @@ function saveMockup($data) {
         $data['screen_image'] = $existingData['screen_image'];
     }
     
-    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (uuid, vertices, screen_image, size, position) 
-                          VALUES (:uuid, :vertices, :screen_image, :size, :position)');
+    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (uuid, vertices, screen_image, size, position, background_image, texts) 
+                          VALUES (:uuid, :vertices, :screen_image, :size, :position, :background_image, :texts)');
     $stmt->execute([
         ':uuid' => $data['uuid'],
         ':vertices' => $data['vertices'],
         ':screen_image' => $data['screen_image'],
         ':size' => $data['size'],
-        ':position' => $data['position']
+        ':position' => $data['position'],
+        ':background_image' => $data['background_image'] ?? null,
+        ':texts' => $data['texts'] ?? null
     ]);
     return $stmt->rowCount() > 0;
 }
+
 
 function getMockupData($uuid) {
     $db = getDatabase();
@@ -67,7 +72,6 @@ function getMockupData($uuid) {
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$result) {
-        // Si no existe un mockup para este UUID, devolver datos por defecto
         return [
             'uuid' => $uuid,
             'vertices' => json_encode([
@@ -78,7 +82,8 @@ function getMockupData($uuid) {
             ]),
             'screen_image' => null,
             'background_image' => 'bg.jpg',
-            'isCustomBackground' => false
+            'isCustomBackground' => false,
+            'texts' => '[]'
         ];
     }
     
@@ -87,7 +92,7 @@ function getMockupData($uuid) {
 
 function getAllMockups() {
     $db = getDatabase();
-    $stmt = $db->query('SELECT uuid, screen_image, background_image, datetime(created_at, "localtime") as created_at 
+    $stmt = $db->query('SELECT uuid, screen_image, datetime(created_at, "localtime") as created_at 
                         FROM mockups ORDER BY created_at DESC');
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -119,6 +124,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Faltan datos requeridos");
         }
 
+        // Manejar la actualización de la imagen de fondo
+        if (isset($data['background_image'])) {
+            if (filter_var($data['background_image'], FILTER_VALIDATE_URL)) {
+                // Si es una URL válida (imagen de tarjeta de producto), la guardamos directamente
+                $data['background_image'] = $data['background_image'];
+            } elseif ($data['background_image'] === '/bg.jpg') {
+                // Si es la imagen por defecto, guardamos null en la base de datos
+                $data['background_image'] = null;
+            } elseif (isset($_FILES['background_image'])) {
+                // Si se subió un archivo de imagen de fondo
+                $backgroundImagePath = handleFileUpload($_FILES['background_image'], 'bg');
+                if ($backgroundImagePath) {
+                    $data['background_image'] = $backgroundImagePath;
+                }
+            }
+        }
+
         // Solo procesar la imagen si se ha cargado una nueva
         if ($data['new_image_loaded'] === 'true') {
             if (isset($_FILES['screen_image'])) {
@@ -147,7 +169,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Exception occurred: " . $e->getMessage());
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
-} else {
-    echo json_encode(['success' => false, 'error' => 'Método no permitido']);
 }
 ?>

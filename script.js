@@ -4,6 +4,8 @@ let uuid = new URLSearchParams(window.location.search).get('uuid') || generateUU
 let screenImageSelected = false;
 let backgroundImage = 'bg.avif';
 let newImageLoaded = false;
+let currentBackgroundId = null;
+let addedTexts = []; // Array para almacenar los objetos de texto agregados
 
 // Función para generar UUID (si no está disponible en el lado del servidor)
 function generateUUID() {
@@ -32,7 +34,65 @@ document.addEventListener('DOMContentLoaded', () => {
     if (initialData) {
         loadInitialData(initialData);
     }
+
+     // Añadir event listeners a las tarjetas de productos
+    const productCards = document.querySelectorAll('.product-card');
+    productCards.forEach(card => {
+        card.addEventListener('click', handleProductCardClick);
+    });
 });
+
+function handleProductCardClick(event) {
+    const card = event.currentTarget;
+    const imageUrl = card.getAttribute('data-image');
+    const productId = card.getAttribute('data-id');
+
+    if (currentBackgroundId === productId) {
+        // Si se hace clic en la misma tarjeta, volver al fondo por defecto
+        setCanvasBackground('/bg.jpg');
+        currentBackgroundId = null;
+        saveVertices('/bg.jpg');
+    } else {
+        // Cambiar el fondo al de la tarjeta seleccionada
+        setCanvasBackground(imageUrl);
+        currentBackgroundId = productId;
+        console.log('Fondo cambiado a:', imageUrl);
+        saveVertices(imageUrl);
+    }
+}
+
+function setCanvasBackground(imageUrl) {
+    fabric.Image.fromURL(imageUrl, function(img) {
+        const canvasAspect = canvas.width / canvas.height;
+        const imgAspect = img.width / img.height;
+        let scaleX, scaleY, left, top;
+
+        if (canvasAspect > imgAspect) {
+            // El canvas es más ancho que la imagen
+            scaleX = canvas.width / img.width;
+            scaleY = scaleX;
+            left = 0;
+            top = (canvas.height - (img.height * scaleY)) / 2;
+        } else {
+            // El canvas es más alto que la imagen
+            scaleY = canvas.height / img.height;
+            scaleX = scaleY;
+            top = 0;
+            left = (canvas.width - (img.width * scaleX)) / 2;
+        }
+
+        img.set({
+            scaleX: scaleX,
+            scaleY: scaleY,
+            left: left,
+            top: top,
+            originX: 'left',
+            originY: 'top'
+        });
+
+        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+    });
+}
 
 let isPerspectiveMode = false;
 
@@ -113,6 +173,60 @@ function createPcScreen() {
   updateScreenControls();
 }
 
+function addTextToCanvas() {
+    const text = prompt("Ingrese el texto que desea agregar:");
+    if (text) {
+      const fabricText = new fabric.IText(text, {
+        left: canvas.width / 2,
+        top: canvas.height / 2,
+        fontSize: 20,
+        fill: '#000000',
+        fontFamily: 'Arial',
+        editable: true
+      });
+  
+      canvas.add(fabricText);
+      addedTexts.push(fabricText);
+      canvas.setActiveObject(fabricText);
+      canvas.renderAll();
+  
+      // Agregar eventos para manejar la perspectiva del texto
+      fabricText.on('moving', updateTextPerspective);
+      fabricText.on('scaling', updateTextPerspective);
+      fabricText.on('rotating', updateTextPerspective);
+    }
+  }
+  
+  function updateTextPerspective(event) {
+    const text = event.target;
+    if (isPerspectiveMode) {
+      applyPerspectiveToText(text);
+    }
+    debouncedSaveVertices();
+  }
+  
+  function applyPerspectiveToText(text) {
+    const matrix = getPerspectiveMatrix();
+    text.set('transformMatrix', matrix);
+    canvas.renderAll();
+  }
+  
+  function getPerspectiveMatrix() {
+    const source = [
+      {x: 0, y: 0},
+      {x: screen.width, y: 0},
+      {x: screen.width, y: screen.height},
+      {x: 0, y: screen.height}
+    ];
+    
+    return fabric.util.getTransformMatrix({
+      points: source,
+      bounds: points,
+      widthFactor: 1,
+      heightFactor: 1
+    });
+  }
+  
 
 function updateScreenControls() {
   if (isPerspectiveMode) {
@@ -321,57 +435,71 @@ function handleControlPointChange() {
     debouncedSaveVertices();
 }
 
-const debouncedUpdatePerspective = debounce(applyPerspectiveToImage, 100);
+const debouncedUpdatePerspective = debounce(applyPerspectiveToImage, 10);
 
 function saveVertices() {
-  const formData = new FormData();
-  formData.append('uuid', uuid);
-  formData.append('vertices', JSON.stringify(points));
+    const formData = new FormData();
+    formData.append('uuid', uuid);
+    formData.append('vertices', JSON.stringify(points));
+    
+    const size = {
+        width: screen.getScaledWidth(),
+        height: screen.getScaledHeight()
+    };
+    const position = {
+        left: screen.left,
+        top: screen.top
+    };
+    formData.append('size', JSON.stringify(size));
+    formData.append('position', JSON.stringify(position));
   
-  const size = {
-      width: screen.getScaledWidth(),
-      height: screen.getScaledHeight()
-  };
-  const position = {
-      left: screen.left,
-      top: screen.top
-  };
-  formData.append('size', JSON.stringify(size));
-  formData.append('position', JSON.stringify(position));
+    // Adjuntar la imagen de fondo actual
+    formData.append('background_image', currentBackgroundId || '/bg.jpg');
+  
+    // Solo adjuntar la imagen si se ha cargado una nueva
+    if (newImageLoaded) {
+        const screenInput = document.getElementById('screenImage');
+        if (screenInput.files.length > 0) {
+            formData.append('screen_image', screenInput.files[0]);
+        } else if (originalImage && originalImage.src.startsWith('data:')) {
+            formData.append('screen_image', originalImage.src);
+        }
+        formData.append('new_image_loaded', 'true');
+        newImageLoaded = false;  // Resetear la bandera después de guardar
+    } else {
+        formData.append('new_image_loaded', 'false');
+    }
 
-  // Solo adjuntar la imagen si se ha cargado una nueva
-  if (newImageLoaded) {
-      const screenInput = document.getElementById('screenImage');
-      if (screenInput.files.length > 0) {
-          formData.append('screen_image', screenInput.files[0]);
-      } else if (originalImage && originalImage.src.startsWith('data:')) {
-          formData.append('screen_image', originalImage.src);
-      }
-      formData.append('new_image_loaded', 'true');
-      newImageLoaded = false;  // Resetear la bandera después de guardar
-  } else {
-      formData.append('new_image_loaded', 'false');
+    const textsData = addedTexts.map(text => ({
+        content: text.text,
+        left: text.left,
+        top: text.top,
+        fontSize: text.fontSize,
+        fontFamily: text.fontFamily,
+        fill: text.fill,
+        angle: text.angle,
+        scaleX: text.scaleX,
+        scaleY: text.scaleY
+    }));
+    
+    formData.append('texts', JSON.stringify(textsData));
+
+    fetch('main.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Mockup guardado correctamente.');
+        } else {
+            console.error('Error al guardar el mockup:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error en la solicitud:', error);
+    });
   }
-
-  fetch('main.php', {
-      method: 'POST',
-      body: formData
-  })
-  .then(response => response.text())
-  .then(text => {
-      return JSON.parse(text);
-  })
-  .then(data => {
-      if (data.success) {
-          console.log('Mockup guardado correctamente.');
-      } else {
-          console.error('Error al guardar el mockup:', data.error);
-      }
-  })
-  .catch(error => {
-      console.error('Error en la solicitud:', error);
-  });
-}
 
 function setupEventListeners() {
   document.getElementById('screenImageBtn').addEventListener('click', () => {
@@ -386,37 +514,77 @@ function setupEventListeners() {
       isPerspectiveMode = this.checked;
       updateScreenControls();
   });
+  document.getElementById('addTextBtn').addEventListener('click', addTextToCanvas);
 }
 
 
 function downloadCompositeImage() {
-  // Crear un nuevo canvas para la composición
-  const compositeCanvas = document.createElement('canvas');
-  const ctx = compositeCanvas.getContext('2d');
+    // Determinar qué imagen de fondo usar
+    let backgroundImg;
+    if (canvas.backgroundImage) {
+        // Si hay una imagen de fondo en el canvas (imagen de card seleccionada), usarla
+        backgroundImg = canvas.backgroundImage._element;
+    } else {
+        // Si no, usar la imagen de fondo por defecto
+        backgroundImg = document.getElementById('backgroundImage');
+    }
 
-  // Establecer las dimensiones del canvas compuesto
-  compositeCanvas.width = canvas.width;
-  compositeCanvas.height = canvas.height;
+    // Obtener las dimensiones reales de la imagen de fondo
+    const imgWidth = backgroundImg.naturalWidth;
+    const imgHeight = backgroundImg.naturalHeight;
 
-  // Dibujar la imagen de fondo
-  const backgroundImg = document.getElementById('backgroundImage');
-  ctx.drawImage(backgroundImg, 0, 0, compositeCanvas.width, compositeCanvas.height);
+    // Crear un nuevo canvas para la composición
+    const compositeCanvas = document.createElement('canvas');
+    const ctx = compositeCanvas.getContext('2d');
 
-  // Dibujar el contenido del canvas principal
-  ctx.drawImage(canvas.getElement(), 0, 0);
+    // Establecer las dimensiones del canvas compuesto para que coincidan con la imagen de fondo
+    compositeCanvas.width = imgWidth;
+    compositeCanvas.height = imgHeight;
 
-  // Convertir el canvas a una URL de datos
-  const dataURL = compositeCanvas.toDataURL('image/png');
+    // Dibujar la imagen de fondo en su tamaño original
+    ctx.drawImage(backgroundImg, 0, 0, imgWidth, imgHeight);
 
-  // Crear un enlace de descarga
-  const downloadLink = document.createElement('a');
-  downloadLink.href = dataURL;
-  downloadLink.download = 'mockup_composite.png';
+    // Crear una copia temporal del canvas principal sin los controles
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
 
-  // Simular un clic en el enlace para iniciar la descarga
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
+    // Ocultar temporalmente los elementos que no queremos en la imagen final
+    const originalControlsVisibility = screen.get('visible');
+    screen.set('visible', false);
+    controlPoints.forEach(point => point.set('visible', false));
+
+    // Renderizar solo los objetos visibles en el canvas temporal
+    canvas.getObjects().forEach(obj => {
+        if (obj.visible) {
+        obj.render(tempCtx);
+        }
+    });
+
+    // Restaurar la visibilidad de los elementos
+    screen.set('visible', originalControlsVisibility);
+    controlPoints.forEach(point => point.set('visible', true));
+
+    // Calcular la escala para ajustar el contenido del canvas al tamaño de la imagen de fondo
+    const scaleX = imgWidth / canvas.width;
+    const scaleY = imgHeight / canvas.height;
+
+    // Dibujar el contenido del canvas temporal en el canvas compuesto, ajustando la escala
+    ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height, 0, 0, imgWidth, imgHeight);
+
+    // Convertir el canvas a una URL de datos
+    const dataURL = compositeCanvas.toDataURL('image/png');
+
+    // Crear un enlace de descarga
+    const downloadLink = document.createElement('a');
+    downloadLink.href = dataURL;
+    downloadLink.download = 'mockup_composite.png';
+
+    // Simular un clic en el enlace para iniciar la descarga
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
 }
 
 function loadInitialData(data) {
@@ -425,6 +593,35 @@ function loadInitialData(data) {
     }
     if (data.screen_image) {
         loadImageFromURL(data.screen_image);
+    }
+    if (data.background_image) {
+        setCanvasBackground(data.background_image);
+        currentBackgroundId = data.background_image;
+    } else {
+        setCanvasBackground('/bg.jpg');
+    }
+    if (data.texts) {
+        const textsData = JSON.parse(data.texts);
+        textsData.forEach(textData => {
+            const fabricText = new fabric.IText(textData.content, {
+            left: textData.left,
+            top: textData.top,
+            fontSize: textData.fontSize,
+            fontFamily: textData.fontFamily,
+            fill: textData.fill,
+            angle: textData.angle,
+            scaleX: textData.scaleX,
+            scaleY: textData.scaleY,
+            editable: true
+            });
+
+            canvas.add(fabricText);
+            addedTexts.push(fabricText);
+
+            fabricText.on('moving', updateTextPerspective);
+            fabricText.on('scaling', updateTextPerspective);
+            fabricText.on('rotating', updateTextPerspective);
+        });
     }
 }
 

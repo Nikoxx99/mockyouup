@@ -1,4 +1,5 @@
 <?php
+include("dbconfig.php");
 require_once 'main.php';
 
 // Función para generar un UUID v4
@@ -21,6 +22,16 @@ if (!$uuid) {
 
 // Obtener los datos del mockup si existe
 $mockupData = getMockupData($uuid);
+
+// Inicializar la conexión a la base de datos
+$db = new DBConnection();
+$dbcon = $db->select_database(Host, User, Password, Database);
+
+// Obtener productos de una categoría específica (por ejemplo, categoría 1)
+$category_id = 5; // Puedes cambiar esto según tus necesidades
+$sql_products = "SELECT * FROM product_category WHERE catmenu_id LIKE '%$category_id%' ORDER BY product_name ASC LIMIT 8";
+$res_products = $db->query_execute($sql_products);
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -35,14 +46,21 @@ $mockupData = getMockupData($uuid);
 <body>
     <div id="app">
         <nav class="navbar">
-            <a href="index.php" class="nav-item">Editor de Mockups</a>
             <a href="list.php" class="nav-item">Lista de Mockups</a>
         </nav>
 
         <div class="layout">
         <aside class="sidebar">
-            <h2>Opciones</h2>
+            <div class="logo-container">
+                <img src="logo.svg" alt="Logo de la empresa" class="company-logo">
+            </div>
             <div class="sidebar-buttons">
+                <button class="sidebar-button" id="addTextBtn">
+                    <div class="button-icon">
+                        <i class="fas fa-font"></i>
+                    </div>
+                    <span>Agregar Texto</span>
+                </button>
                 <button class="sidebar-button" id="screenImageBtn">
                     <div class="button-icon">
                         <i class="fas fa-user"></i>
@@ -75,12 +93,21 @@ $mockupData = getMockupData($uuid);
                 <div class="product-grid">
                     <h3>Productos Disponibles</h3>
                     <div class="grid">
-                        <?php for ($i = 1; $i <= 30; $i++): ?>
-                            <div class="product-card">
-                                <div class="product-image"></div>
-                                <h4>Producto <?php echo $i; ?></h4>
+                        <?php
+                        while ($row_product = $db->get_all_row($res_products)) {
+                        ?>
+                            <div class="product-card" data-image="/<?php echo $row_product['image']; ?>" data-id="<?php echo $row_product['p_cat_id']; ?>">
+                                <div class="product-image">
+                                    <img src="/<?php echo $row_product['image']; ?>" alt="<?php echo htmlspecialchars($row_product['product_name']); ?>">
+                                </div>
+                                <div class="product-info">
+                                    <h4><?php echo htmlspecialchars($row_product['product_name']); ?></h4>
+                                    <p>Código: <?php echo htmlspecialchars($row_product['code']); ?></p>
+                                </div>
                             </div>
-                        <?php endfor; ?>
+                        <?php
+                        }
+                        ?>
                     </div>
                 </div>
             </main>
