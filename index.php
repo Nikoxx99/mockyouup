@@ -50,7 +50,7 @@ $res_products = $db->query_execute($sql_products);
             <strong class="title-maker">
                 <p>Design your own T-Shirt with our custom maker</p>
             </strong>
-            <a href="list.php" class="nav-item-active"><i class="fa-regular fa-credit-card"></i> Get Quote</a>
+            <button class="nav-item-active"><i class="fa-regular fa-credit-card"></i> Get Quote</button>
         </nav>
 
         <div class="layout">
@@ -112,11 +112,95 @@ $res_products = $db->query_execute($sql_products);
         </div>
     </div>
 
+    <!-- Modal para Get Quote -->
+    <div id="quoteModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <div id="stepper">
+                <!-- Step 1: Delivery -->
+                <div class="step" id="step1">
+                    <h2>Delivery Options</h2>
+                    <label><input type="radio" name="delivery" value="pickup"> Pick up</label>
+                    <label><input type="radio" name="delivery" value="delivery"> Delivery</label>
+                </div>
+
+                <!-- Step 2: Payment Method -->
+                <div class="step" id="step2">
+                    <h2>Payment Method</h2>
+                    <label><input type="radio" name="payment" value="credit_card"> Credit Card</label>
+                    <label><input type="radio" name="payment" value="paypal"> PayPal</label>
+                    <label><input type="radio" name="payment" value="store"> Pay At Store</label>
+                    <label><input type="radio" name="payment" value="invoice"> Invoice</label>
+                </div>
+
+                <!-- Step 3: Billing Information -->
+                <div class="step" id="step3">
+                    <h2>Billing Information</h2>
+                    <input type="text" id="firstName" placeholder="First Name">
+                    <input type="text" id="lastName" placeholder="Last Name">
+                    <input type="text" id="company" placeholder="Company">
+                    <input type="email" id="email" placeholder="Email">
+                    <input type="tel" id="telephone" placeholder="Telephone">
+                    <input type="text" id="address1" placeholder="Address 1">
+                    <input type="text" id="address2" placeholder="Address 2">
+                    <input type="text" id="city" placeholder="City">
+                    <input type="text" id="state" placeholder="State">
+                    <input type="text" id="country" placeholder="Country">
+                    <input type="text" id="zipCode" placeholder="Zip Code">
+                </div>
+
+                <!-- Step 4: Order Review -->
+                <div class="step" id="step4">
+                    <h2>Order Review</h2>
+                    <p>Subtotal: <span id="subtotal">100.00</span></p>
+                    <p>Shipping Charge: <span id="shippingCharge">5.00</span></p>
+                    <p>Grand Total: <span id="grandTotal">105.00</span></p>
+
+                    <!-- Payment method-specific sections -->
+                    
+                    <!-- Credit Card Payment -->
+                    <div id="creditCardFields" class="payment-fields">
+                        <h3>Credit Card Information</h3>
+                        <input type="text" id="cardNumber" placeholder="Card Number">
+                        <input type="text" id="cardHolder" placeholder="Card Holder Name">
+                        <input type="text" id="expirationDate" placeholder="Expiration Date (MM/YY)">
+                        <input type="text" id="securityCode" placeholder="Security Code">
+                    </div>
+
+                    <!-- PayPal Payment -->
+                    <div id="paypalFields" class="payment-fields">
+                        <h3>PayPal Information</h3>
+                        <input type="email" id="paypalEmail" placeholder="PayPal Email">
+                        <button id="continueWithPaypal">Continue with PayPal</button>
+                    </div>
+
+                    <!-- Pay at the Store -->
+                    <div id="payAtStoreFields" class="payment-fields">
+                        <h3>Pay at Store</h3>
+                        <p>Your store redemption code: <strong id="storeCode"></strong></p>
+                    </div>
+
+                    <!-- Invoice Payment -->
+                    <div id="invoiceFields" class="payment-fields">
+                        <h3>Invoice</h3>
+                        <button id="downloadInvoice">Download Invoice</button>
+                    </div>
+                </div>
+
+                <div class="stepper-buttons">
+                    <button id="prevBtn">Previous</button>
+                    <button id="nextBtn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script>
         var initialData = <?php echo json_encode($mockupData); ?>;
         var currentUUID = "<?php echo $uuid; ?>";
     </script>
     <script src="script.js"></script>
+    <script src="modal.js"></script>
 </body>
 </html>
