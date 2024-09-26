@@ -1,7 +1,8 @@
 :root {
   --primary-color: #FF5722;
-  --background-color: #1a1a1a;
-  --text-color: #ffffff;
+  --background-color: #eaeaea;
+  --text-color: #333333;
+  --text-color-light: #eeeeee;
   --glass-background: rgba(255, 255, 255, 0.1);
   --glass-border: 1px solid rgba(255, 255, 255, 0.18);
   --navbar-height: 72px;
@@ -18,13 +19,56 @@ body, html {
   overflow: hidden;
 }
 
+*::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+*::-webkit-scrollbar-track {
+  border-radius: 5px;
+  background-color: #DFE9EB;
+}
+
+*::-webkit-scrollbar-track:hover {
+  background-color: #B8C0C2;
+}
+
+*::-webkit-scrollbar-track:active {
+  background-color: #B8C0C2;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background-color: #FF5722;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #62A34B;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: #62A34B;
+}
+
+.title-maker {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 20px;
+}
+
+@media screen and (max-width: 768px) {
+  .title-maker {
+    display: none;
+  }
+}
+
 .navbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: var(--navbar-height);
-  background: rgba(26, 26, 26, 0.8);
+  background: var(--background-color);
   backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-between;
@@ -32,6 +76,7 @@ body, html {
   padding: 0 20px;
   z-index: 1000;
   box-sizing: border-box;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .nav-item {
@@ -40,10 +85,24 @@ body, html {
   font-size: 16px;
   font-weight: bold;
   transition: color 0.3s ease;
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  padding:12px 20px;
 }
 
 .nav-item:hover {
   color: var(--primary-color);
+}
+
+.nav-item-active {
+  color: var(--text-color-light);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: bold;
+  transition: color 0.3s ease;
+  background-color: var(--primary-color);
+  border-radius: 10px;
+  padding:12px 20px;
 }
 
 .layout {
@@ -67,6 +126,7 @@ body, html {
   top: var(--navbar-height);
   overflow-y: auto;
   box-sizing: border-box;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .logo-container {
   width: 100%;
@@ -100,6 +160,7 @@ body, html {
   height: 80svh;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 #backgroundImage {

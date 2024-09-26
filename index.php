@@ -29,7 +29,7 @@ $dbcon = $db->select_database(Host, User, Password, Database);
 
 // Obtener productos de una categoría específica (por ejemplo, categoría 1)
 $category_id = 5; // Puedes cambiar esto según tus necesidades
-$sql_products = "SELECT * FROM product_category WHERE catmenu_id LIKE '%$category_id%' ORDER BY product_name ASC LIMIT 8";
+$sql_products = "SELECT * FROM product_category WHERE catmenu_id LIKE '%$category_id%' ORDER BY product_name ASC LIMIT 1";
 $res_products = $db->query_execute($sql_products);
 
 ?>
@@ -46,7 +46,11 @@ $res_products = $db->query_execute($sql_products);
 <body>
     <div id="app">
         <nav class="navbar">
-            <a href="list.php" class="nav-item">Lista de Mockups</a>
+            <a href="list.php" class="nav-item"><i class="fa-solid fa-list-check"></i> Lista de Mockups</a>
+            <strong class="title-maker">
+                <p>Design your own T-Shirt with our custom maker</p>
+            </strong>
+            <a href="list.php" class="nav-item-active"><i class="fa-regular fa-credit-card"></i> Get Quote</a>
         </nav>
 
         <div class="layout">
@@ -66,12 +70,6 @@ $res_products = $db->query_execute($sql_products);
                         <i class="fas fa-user"></i>
                     </div>
                     <span>Subir tu logo</span>
-                </button>
-                <button class="sidebar-button" id="saveBtn">
-                    <div class="button-icon">
-                        <i class="fas fa-save"></i>
-                    </div>
-                    <span>Guardar</span>
                 </button>
             </div>
             <div class="toggle-container">

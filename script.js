@@ -144,8 +144,8 @@ function createPcScreen() {
   const canvasHeight = canvas.height;
 
   // Usar los datos guardados si están disponibles, de lo contrario usar valores por defecto
-  let screenSize = initialData.size ? JSON.parse(initialData.size) : { width: canvasWidth * 0.6, height: canvasHeight * 0.6 };
-  let screenPosition = initialData.position ? JSON.parse(initialData.position) : { left: canvasWidth * 0.2, top: canvasHeight * 0.2 };
+  let screenSize = initialData.size ? JSON.parse(initialData.size) : { width: 200, height: 200 };
+  let screenPosition = initialData.position ? JSON.parse(initialData.position) : { left: canvasWidth * 0.25, top: canvasHeight * 0.2 };
 
   points = [
       { x: screenPosition.left, y: screenPosition.top },
@@ -156,7 +156,7 @@ function createPcScreen() {
 
   screen = new fabric.Polygon(points, {
       fill: 'transparent',
-      stroke: '#e6e6e6',
+      stroke: '#ffb199',
       strokeWidth: 2,
       selectable: true,
       hasControls: true,
@@ -506,7 +506,7 @@ function setupEventListeners() {
       document.getElementById('screenImage').click();
   });
 
-  document.getElementById('saveBtn').addEventListener('click', downloadCompositeImage);
+//   document.getElementById('saveBtn').addEventListener('click', downloadCompositeImage);
 
   document.getElementById('screenImage').addEventListener('change', loadImage);
 
