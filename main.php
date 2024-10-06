@@ -35,42 +35,64 @@ function createTable($db) {
         size TEXT,
         position TEXT,
         texts TEXT,
+        product_id INTEGER,
+        selected_color TEXT,
+        selected_size TEXT,
+        composite_image TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )');
 }
 
 function saveMockup($data) {
     $db = getDatabase();
-    
+
     // Obtener los datos existentes del mockup
     $existingData = getMockupData($data['uuid']);
-    
+
     // Si no se ha cargado una nueva imagen, mantener la imagen existente
     if ($data['new_image_loaded'] === 'false' && $existingData['screen_image']) {
         $data['screen_image'] = $existingData['screen_image'];
     }
-    
-    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (uuid, vertices, screen_image, size, position, background_image, texts) 
-                          VALUES (:uuid, :vertices, :screen_image, :size, :position, :background_image, :texts)');
+
+    // Utilizar los datos nuevos o reemplazar por valores vacíos si no se proporcionan
+    $vertices = $data['vertices'] ?? $existingData['vertices'];
+    $screen_image = $data['screen_image'] ?? $existingData['screen_image'];
+    $size = $data['size'] ?? $existingData['size'];
+    $position = $data['position'] ?? $existingData['position'];
+    $background_image = $data['background_image'] ?? $existingData['background_image'];
+    $texts = $data['texts'] ?? $existingData['texts'];
+
+    // Si el campo `texts` no existe en los datos recibidos, significa que no hay textos en el canvas, por lo que debemos guardarlo como vacío.
+    $texts = isset($data['texts']) ? $data['texts'] : '[]';
+
+    $product_id = $data['product_id'] ?? $existingData['product_id'];
+    $selected_color = $data['selected_color'] ?? $existingData['selected_color'];
+    $selected_size = $data['selected_size'] ?? $existingData['selected_size'];
+
+    // Insertar o reemplazar los datos en la tabla de mockups
+    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (uuid, vertices, screen_image, size, position, background_image, texts, product_id, selected_color, selected_size) 
+                          VALUES (:uuid, :vertices, :screen_image, :size, :position, :background_image, :texts, :product_id, :selected_color, :selected_size)');
     $stmt->execute([
         ':uuid' => $data['uuid'],
-        ':vertices' => $data['vertices'],
-        ':screen_image' => $data['screen_image'],
-        ':size' => $data['size'],
-        ':position' => $data['position'],
-        ':background_image' => $data['background_image'] ?? null,
-        ':texts' => $data['texts'] ?? null
+        ':vertices' => $vertices,
+        ':screen_image' => $screen_image,
+        ':size' => $size,
+        ':position' => $position,
+        ':background_image' => $background_image,
+        ':texts' => $texts,
+        ':product_id' => $product_id,
+        ':selected_color' => $selected_color,
+        ':selected_size' => $selected_size
     ]);
     return $stmt->rowCount() > 0;
 }
-
 
 function getMockupData($uuid) {
     $db = getDatabase();
     $stmt = $db->prepare('SELECT * FROM mockups WHERE uuid = :uuid');
     $stmt->execute([':uuid' => $uuid]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$result) {
         return [
             'uuid' => $uuid,
@@ -82,14 +104,16 @@ function getMockupData($uuid) {
             ]),
             'screen_image' => null,
             'background_image' => 'bg.jpg',
+            'product_id' => null,
             'isCustomBackground' => false,
-            'texts' => '[]'
+            'texts' => '[]',
+            'selected_color' => null,
+            'selected_size' => null
         ];
     }
-    
+
     return $result;
 }
-
 function getAllMockups() {
     $db = getDatabase();
     $stmt = $db->query('SELECT uuid, screen_image, datetime(created_at, "localtime") as created_at 
@@ -120,9 +144,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Received POST data: " . print_r($_POST, true));
         error_log("Received FILES data: " . print_r($_FILES, true));
 
+        if (isset($_POST['action']) && $_POST['action'] === 'saveCompositeImage') {
+            $uuid = $_POST['uuid'];
+            $imageData = $_POST['image'];
+
+            if (!$uuid || !$imageData) {
+                throw new Exception("Faltan datos requeridos para guardar la imagen compuesta.");
+            }
+
+            // Decodificar la imagen
+            $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $imageData));
+            $filename = 'mockups/' . $uuid . '.png';
+
+            // Asegurarse de que la carpeta "mockups" existe
+            if (!file_exists('mockups')) {
+                mkdir('mockups', 0777, true);
+            }
+
+            // Guardar la imagen en la carpeta "mockups"
+            file_put_contents($filename, $imageData);
+
+            // Actualizar la base de datos con la ruta de la imagen
+            $db = getDatabase();
+            $stmt = $db->prepare('UPDATE mockups SET composite_image = :composite_image WHERE uuid = :uuid');
+            $stmt->execute([
+                ':composite_image' => $filename,
+                ':uuid' => $uuid
+            ]);
+
+            echo json_encode(['success' => true, 'image' => $filename]);
+            exit;
+        }
+
         if (!isset($data['uuid']) || !isset($data['vertices'])) {
             throw new Exception("Faltan datos requeridos");
         }
+
+        // Obtener los datos existentes del mockup
+        $existingData = getMockupData($data['uuid']);
+
+        // Combinar datos existentes con los nuevos
+        $updatedData = array_merge($existingData, $data);
 
         // Manejar la actualización de la imagen de fondo
         if (isset($data['background_image'])) {

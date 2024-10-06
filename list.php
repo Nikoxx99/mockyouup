@@ -1,4 +1,5 @@
 <?php
+die('Unauthorized Access');
 require_once 'main.php';
 $mockups = getAllMockups();
 

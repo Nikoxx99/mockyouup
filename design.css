@@ -1,0 +1,109 @@
+/* design.css */
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f5f5;
+  color:#636363;
+  padding: 20px; /* Añadir padding al body */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  background-color: #ffffff;
+  padding: 10px 20px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+  display:flex;
+  justify-content: space-between;
+}
+
+.logo-container {
+  max-width: 200px;
+}
+
+.logo-container img {
+  width: 100%;
+  height: auto;
+}
+
+.mockup-box {
+  background-color: #ffffff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mockup-box img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.bottom-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.box {
+  background-color: #ffffff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  flex: 1;
+  min-width: 300px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo-section img {
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s;
+  margin-top: 10px;
+}
+
+.logo-section img:hover {
+  transform: scale(1.05);
+}
+
+.download-button {
+  width: 100%;
+  padding: 15px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  margin-bottom: 20px;
+  transition: background-color 0.3s;
+}
+
+.download-button:hover {
+  background-color: #0056b3;
+}
+
+.mockup-info p {
+  margin: 0 0 10px;
+}
+
+.mockup-info p:last-child {
+  margin-bottom: 0;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .bottom-section {
+      flex-direction: column;
+  }
+}
