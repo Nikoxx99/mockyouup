@@ -12,6 +12,7 @@ function handleError($errno, $errstr, $errfile, $errline) {
 }
 
 set_error_handler("handleError");
+
 function getDatabase() {
     static $db = null;
     if ($db === null) {
@@ -19,6 +20,7 @@ function getDatabase() {
             $db = new PDO('sqlite:mockups.db');
             $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             createTable($db);
+            migrateDatabase($db); // Llamar a la función de migración
         } catch (PDOException $e) {
             die("Error connecting to database: " . $e->getMessage());
         }
@@ -43,46 +45,102 @@ function createTable($db) {
     )');
 }
 
+function migrateDatabase($db) {
+    // Verificar si las columnas nuevas existen, y si no, agregarlas
+    $columns = [];
+    $result = $db->query("PRAGMA table_info(mockups)");
+    foreach ($result as $column) {
+        $columns[] = $column['name'];
+    }
+
+    $db->beginTransaction();
+
+    try {
+        if (!in_array('zoom_level', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN zoom_level REAL");
+        }
+        if (!in_array('pan_x', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN pan_x REAL");
+        }
+        if (!in_array('pan_y', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN pan_y REAL");
+        }
+        // Agregar nuevas columnas para tintas, precio total, cantidad y código ZIP
+        if (!in_array('inks_front', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN inks_front INTEGER");
+        }
+        if (!in_array('inks_back', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN inks_back INTEGER");
+        }
+        if (!in_array('total_price', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN total_price REAL");
+        }
+        if (!in_array('quantity', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN quantity INTEGER");
+        }
+        if (!in_array('zip_code', $columns)) {
+            $db->exec("ALTER TABLE mockups ADD COLUMN zip_code TEXT");
+        }
+
+        $db->commit();
+    } catch (PDOException $e) {
+        $db->rollBack();
+        die("Error durante la migración de la base de datos: " . $e->getMessage());
+    }
+}
+
 function saveMockup($data) {
     $db = getDatabase();
 
     // Obtener los datos existentes del mockup
     $existingData = getMockupData($data['uuid']);
 
-    // Si no se ha cargado una nueva imagen, mantener la imagen existente
-    if ($data['new_image_loaded'] === 'false' && $existingData['screen_image']) {
-        $data['screen_image'] = $existingData['screen_image'];
-    }
-
-    // Utilizar los datos nuevos o reemplazar por valores vacíos si no se proporcionan
-    $vertices = $data['vertices'] ?? $existingData['vertices'];
+    // Utilizar los datos nuevos o existentes
     $screen_image = $data['screen_image'] ?? $existingData['screen_image'];
-    $size = $data['size'] ?? $existingData['size'];
-    $position = $data['position'] ?? $existingData['position'];
+    $size = $data['size'] ?? $existingData['size'] ?? null;
+    $position = $data['position'] ?? $existingData['position'] ?? null;
     $background_image = $data['background_image'] ?? $existingData['background_image'];
     $texts = $data['texts'] ?? $existingData['texts'];
-
-    // Si el campo `texts` no existe en los datos recibidos, significa que no hay textos en el canvas, por lo que debemos guardarlo como vacío.
-    $texts = isset($data['texts']) ? $data['texts'] : '[]';
-
     $product_id = $data['product_id'] ?? $existingData['product_id'];
     $selected_color = $data['selected_color'] ?? $existingData['selected_color'];
     $selected_size = $data['selected_size'] ?? $existingData['selected_size'];
+    $zoom_level = $data['zoom_level'] ?? $existingData['zoom_level'];
+    $pan_x = $data['pan_x'] ?? $existingData['pan_x'];
+    $pan_y = $data['pan_y'] ?? $existingData['pan_y'];
+
+    // Nuevos campos
+    $inks_front = $data['inks_front'] ?? $existingData['inks_front'];
+    $inks_back = $data['inks_back'] ?? $existingData['inks_back'];
+    $total_price = $data['total_price'] ?? $existingData['total_price'];
+    $quantity = $data['quantity'] ?? $existingData['quantity'];
+    $zip_code = $data['zip_code'] ?? $existingData['zip_code'];
 
     // Insertar o reemplazar los datos en la tabla de mockups
-    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (uuid, vertices, screen_image, size, position, background_image, texts, product_id, selected_color, selected_size) 
-                          VALUES (:uuid, :vertices, :screen_image, :size, :position, :background_image, :texts, :product_id, :selected_color, :selected_size)');
+    $stmt = $db->prepare('INSERT OR REPLACE INTO mockups (
+        uuid, vertices, screen_image, size, position, background_image, texts, product_id, selected_color, selected_size, composite_image, zoom_level, pan_x, pan_y, inks_front, inks_back, total_price, quantity, zip_code, created_at
+    ) VALUES (
+        :uuid, :vertices, :screen_image, :size, :position, :background_image, :texts, :product_id, :selected_color, :selected_size, :composite_image, :zoom_level, :pan_x, :pan_y, :inks_front, :inks_back, :total_price, :quantity, :zip_code, COALESCE((SELECT created_at FROM mockups WHERE uuid = :uuid), CURRENT_TIMESTAMP)
+    )');
     $stmt->execute([
         ':uuid' => $data['uuid'],
-        ':vertices' => $vertices,
-        ':screen_image' => $screen_image,
-        ':size' => $size,
-        ':position' => $position,
-        ':background_image' => $background_image,
-        ':texts' => $texts,
-        ':product_id' => $product_id,
-        ':selected_color' => $selected_color,
-        ':selected_size' => $selected_size
+        ':vertices' => $vertices ?? null,
+        ':screen_image' => $screen_image ?? null,
+        ':size' => $size ?? null,
+        ':position' => $position ?? null,
+        ':background_image' => $background_image ?? null,
+        ':texts' => $texts ?? null,
+        ':product_id' => $product_id ?? null,
+        ':selected_color' => $selected_color ?? null,
+        ':selected_size' => $selected_size ?? null,
+        ':composite_image' => $existingData['composite_image'] ?? null,
+        ':zoom_level' => $zoom_level ?? null,
+        ':pan_x' => $pan_x ?? null,
+        ':pan_y' => $pan_y ?? null,
+        ':inks_front' => $inks_front ?? null,
+        ':inks_back' => $inks_back ?? null,
+        ':total_price' => $total_price ?? null,
+        ':quantity' => $quantity ?? null,
+        ':zip_code' => $zip_code ?? null
     ]);
     return $stmt->rowCount() > 0;
 }
@@ -96,24 +154,27 @@ function getMockupData($uuid) {
     if (!$result) {
         return [
             'uuid' => $uuid,
-            'vertices' => json_encode([
-                ['x' => 300, 'y' => 100],
-                ['x' => 700, 'y' => 100],
-                ['x' => 720, 'y' => 400],
-                ['x' => 280, 'y' => 400]
-            ]),
             'screen_image' => null,
             'background_image' => 'bg.jpg',
             'product_id' => null,
             'isCustomBackground' => false,
             'texts' => '[]',
             'selected_color' => null,
-            'selected_size' => null
+            'selected_size' => null,
+            'zoom_level' => 1,
+            'pan_x' => 0,
+            'pan_y' => 0,
+            'inks_front' => null,
+            'inks_back' => null,
+            'total_price' => null,
+            'quantity' => null,
+            'zip_code' => null
         ];
     }
 
     return $result;
 }
+
 function getAllMockups() {
     $db = getDatabase();
     $stmt = $db->query('SELECT uuid, screen_image, datetime(created_at, "localtime") as created_at 
@@ -136,13 +197,37 @@ function handleFileUpload($file, $prefix) {
     return null;
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $data = $_POST;
         
         error_log("Received POST data: " . print_r($_POST, true));
         error_log("Received FILES data: " . print_r($_FILES, true));
+
+        if (isset($_POST['action']) && $_POST['action'] === 'saveAdditionalData') {
+            $uuid = $_POST['uuid'];
+
+            // Obtener datos existentes
+            $existingData = getMockupData($uuid);
+
+            // Actualizar datos
+            $updatedData = $existingData;
+
+            $updatedData['inks_front'] = $_POST['inks_front'];
+            $updatedData['inks_back'] = $_POST['inks_back'];
+            $updatedData['total_price'] = $_POST['total_price'];
+            $updatedData['quantity'] = $_POST['quantity'];
+            $updatedData['zip_code'] = $_POST['zip_code'];
+
+            $result = saveMockup($updatedData);
+
+            if ($result) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'No se pudo guardar la información adicional']);
+            }
+            exit;
+        }
 
         if (isset($_POST['action']) && $_POST['action'] === 'saveCompositeImage') {
             $uuid = $_POST['uuid'];
@@ -176,8 +261,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if (!isset($data['uuid']) || !isset($data['vertices'])) {
-            throw new Exception("Faltan datos requeridos");
+        if (!isset($data['uuid'])) {
+            throw new Exception("Faltan la uuid del mockup");
         }
 
         // Obtener los datos existentes del mockup
@@ -203,27 +288,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Solo procesar la imagen si se ha cargado una nueva
-        if ($data['new_image_loaded'] === 'true') {
+        // Manejar la actualización de la imagen de pantalla
+        if (isset($data['customMockupImageLoaded']) && $data['customMockupImageLoaded'] === 'false') {
+            $data['screen_image'] = null;
+        } else {
             if (isset($_FILES['screen_image'])) {
                 $data['screen_image'] = handleFileUpload($_FILES['screen_image'], 'screen');
-                error_log("Handled file upload for screen_image: " . $data['screen_image']);
             } elseif (isset($_POST['screen_image']) && strpos($_POST['screen_image'], 'data:') === 0) {
                 $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $_POST['screen_image']));
                 $filename = uniqid('screen_') . '.png';
                 $filepath = 'uploads/' . $filename;
                 file_put_contents($filepath, $imageData);
                 $data['screen_image'] = $filepath;
-                error_log("Handled base64 data for screen_image: " . $data['screen_image']);
             }
-        } else {
-            error_log("No new screen_image data, keeping existing image");
         }
 
         $result = saveMockup($data);
 
         if ($result) {
-            echo json_encode(['success' => true]);
+            echo json_encode(['success' => true, 'custom_image' => $data['pan_x'].'-'.$data['pan_y'].'-'.$data['zoom_level']]);
         } else {
             echo json_encode(['success' => false, 'error' => 'No se pudo guardar el mockup']);
         }

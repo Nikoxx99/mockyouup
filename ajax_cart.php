@@ -36,7 +36,8 @@ function _AddProduct()
 	$product_size = $_POST['size_name'];
   $uuid = $_POST['rand'];
   $mockup_image = $_POST['image'];
-	
+	$extraPrice = $_POST['extraPrice'];
+
 	// get product information like qty and  price
 	// ."' and p_qty >=".$product_qty
 	//$db=new DBConnection();
@@ -65,7 +66,7 @@ function _AddProduct()
                     }
                     else
                     {
-                        $_SESSION['shopping_cart_price'][] = $args_product['cost_price'];
+                        $_SESSION['shopping_cart_price'][] = $args_product['cost_price'] + $extraPrice;
                     }
 					// get exists list of products and his qty and price
 					$_SESSION['shopping_cart_product'][] = $productid;

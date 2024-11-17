@@ -35,14 +35,29 @@ $clientLogoPath = $mockupData['screen_image']; // Asumiendo que 'screen_image' e
 $creationDate = $mockupData['created_at'];
 $uuid = $mockupData['uuid'];
 
+// Decodificar el campo "texts" (JSON) que contiene el texto y la fuente
+$textData = json_decode($mockupData['texts'], true);
+
+// Inicializamos las variables para mostrar el contenido de los textos y las fuentes
+$textContentList = '';
+$fontFamilyList = '';
+
+// Recorrer los textos del mockup y generar una lista de textos y fuentes
+if (is_array($textData)) {
+    foreach ($textData as $text) {
+        $textContentList .= htmlspecialchars($text['content']) . '<br>';  // Extraer el texto
+        $fontFamilyList .= htmlspecialchars($text['fontFamily']) . '<br>';  // Extraer la fuente
+    }
+} else {
+    $textContentList = 'Texto no disponible';
+    $fontFamilyList = 'Fuente no disponible';
+}
+
 // Verificar si los archivos existen
 if (!file_exists($compositeImagePath)) {
     $compositeImagePath = 'placeholder_composite.png'; // Imagen de marcador de posición
 }
 
-if (!file_exists($clientLogoPath)) {
-    $clientLogoPath = 'placeholder_logo.png'; // Imagen de marcador de posición
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -75,6 +90,7 @@ if (!file_exists($clientLogoPath)) {
                 <h2>Upload resource</h2>
                 <img src="<?php echo htmlspecialchars($clientLogoPath); ?>" alt="Logo del Cliente">
             </div>
+
             <!-- Caja con el botón de descarga y la información del mockup -->
             <div class="box info-section">
                 <button class="download-button" onclick="downloadResource('<?php echo htmlspecialchars($clientLogoPath); ?>')">
@@ -84,7 +100,10 @@ if (!file_exists($clientLogoPath)) {
                     <h2>Mockup information</h2>
                     <p><strong>UUID:</strong> <?php echo htmlspecialchars($uuid); ?></p>
                     <p><strong>Creation date:</strong> <?php echo htmlspecialchars($creationDate); ?></p>
-                    <!-- Puedes agregar más información aquí -->
+
+                    <!-- Mostrar el contenido de los textos y fuentes -->
+                    <p><strong>Text content:</strong><br><?php echo $textContentList; ?></p>
+                    <p><strong>Font family:</strong><br><?php echo $fontFamilyList; ?></p>
                 </div>
             </div>
         </div>
